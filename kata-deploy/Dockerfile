@@ -7,7 +7,7 @@ ARG KATA_FILE=kata-static-${KATA_VER}-${ARCH}.tar.xz
 
 RUN \
 yum install -y epel-release && \
-yum install -y bzip2 jq && \
+yum install -y bzip2 crudini jq && \
 curl -sOL ${KATA_URL}/${KATA_FILE} && \
 mkdir -p /opt/kata-artifacts && \
 tar xvf ${KATA_FILE} -C /opt/kata-artifacts/ && \
