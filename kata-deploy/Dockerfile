@@ -7,7 +7,7 @@ COPY ${KATA_ARTIFACTS} .
 
 RUN \
 yum install -y epel-release && \
-yum install -y bzip2 jq && \
+yum install -y bzip2 crudini jq && \
 mkdir -p ${DESTINATION} && \
 tar xvf ${KATA_ARTIFACTS} -C ${DESTINATION}/ && \
 chown -R root:root ${DESTINATION}/
