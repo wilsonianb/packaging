@@ -35,6 +35,8 @@ spec:
           mountPath: /etc/crio/
         - name: containerd-conf
           mountPath: /etc/containerd/
+        - name: containerd-k3s-conf
+          mountPath: /var/lib/rancher/k3s/agent/etc/containerd/
         - name: kata-artifacts
           mountPath: /opt/kata/
         - name: dbus
@@ -50,6 +52,9 @@ spec:
         - name: containerd-conf
           hostPath:
             path: /etc/containerd/
+        - name: containerd-k3s-conf
+          hostPath:
+            path: /var/lib/rancher/k3s/agent/etc/containerd/
         - name: kata-artifacts
           hostPath:
             path: /opt/kata/
