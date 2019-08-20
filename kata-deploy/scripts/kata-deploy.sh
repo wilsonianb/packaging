@@ -12,6 +12,8 @@ crio_conf_file="/etc/crio/crio.conf"
 crio_conf_file_backup="${crio_conf_file}.bak"
 containerd_conf_file="/etc/containerd/config.toml"
 containerd_conf_file_backup="${containerd_conf_file}.bak"
+containerd_k3s_conf_file="/var/lib/rancher/k3s/agent/etc/containerd/config.toml"
+containerd_k3s_conf_tmpl="${containerd_k3s_conf_file}.tmpl"
 
 shims=(
 	"fc"
@@ -36,13 +38,29 @@ function get_container_runtime() {
 	if [ "$?" -ne 0 ]; then
                 die "invalid node name"
 	fi
-	echo "$runtime" | awk -F'[:]' '/Container Runtime Version/ {print $2}' | tr -d ' '
+	if echo "$runtime" | grep -qE 'Container Runtime Version.*containerd.*-k3s'; then
+		echo "containerd-k3s"
+	else
+		echo "$runtime" | awk -F'[:]' '/Container Runtime Version/ {print $2}' | tr -d ' '
+	fi
 }
 
 function install_artifacts() {
 	echo "copying kata artifacts onto host"
 	cp -a /opt/kata-artifacts/opt/kata/* /opt/kata/
 	chmod +x /opt/kata/bin/*
+}
+
+function restart_cri_runtime() {
+	if [ "$1" == "containerd-k3s" ]; then
+		if systemctl list-units | grep -q "k3s-agent"; then
+			systemctl restart k3s-agent && sleep 10
+		else
+			systemctl restart k3s && sleep 10
+		fi
+	else
+		systemctl restart $1
+	fi
 }
 
 function configure_cri_runtime() {
@@ -53,9 +71,15 @@ function configure_cri_runtime() {
 	containerd)
 		configure_containerd
 		;;
+	containerd-k3s)
+		if [ ! -f "$containerd_k3s_conf_tmpl" ]; then
+			cp "$containerd_k3s_conf_file" "$containerd_k3s_conf_tmpl"
+		fi
+		configure_containerd
+		;;
 	esac
 	systemctl daemon-reload
-	systemctl restart $1
+	restart_cri_runtime $1
 }
 
 function configure_crio() {
@@ -206,6 +230,9 @@ function cleanup_cri_runtime() {
 	containerd)
 		cleanup_containerd
 		;;
+	containerd-k3s)
+		cleanup_containerd
+		;;
 	esac
 
 }
@@ -216,7 +243,7 @@ function cleanup_crio() {
 }
 
 function cleanup_containerd() {
-	rm -f /etc/containerd/config.toml
+	rm -f $containerd_conf_file
 	if [ -f "$containerd_conf_file_backup" ]; then
 		mv "$containerd_conf_file_backup" "$containerd_conf_file"
 	fi
@@ -242,8 +269,10 @@ function cleanup_containerd() {
 function reset_runtime() {
 	kubectl label node $NODE_NAME katacontainers.io/kata-runtime-
 	systemctl daemon-reload
-	systemctl restart $1
-	systemctl restart kubelet
+	restart_cri_runtime $1
+	if [ "$1" != "containerd-k3s" ]; then
+		systemctl restart kubelet
+	fi
 }
 
 function main() {
@@ -258,6 +287,9 @@ function main() {
 	# CRI-O isn't consistent with the naming -- let's use crio to match the service file
 	if [ "$runtime" == "cri-o" ]; then
 		runtime="crio"
+	elif [ "$runtime" == "containerd-k3s" ]; then
+		containerd_conf_file="${containerd_k3s_conf_tmpl}"
+		containerd_conf_file_backup="${containerd_conf_file}.bak"
 	fi
 
 	action=${1:-}
@@ -267,7 +299,7 @@ function main() {
 	fi
 
 	# only install / remove / update if we are dealing with CRIO or containerd
-	if [ "$runtime" == "crio" ] || [ "$runtime" == "containerd" ]; then
+	if [ "$runtime" == "crio" ] || [ "$runtime" == "containerd" ] || [ "$runtime" == "containerd-k3s" ]; then
 
 		case $action in
 		install)
