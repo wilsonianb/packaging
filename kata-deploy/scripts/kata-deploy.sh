@@ -179,6 +179,8 @@ function configure_containerd() {
 	crudini --set "$containerd_conf_file" plugins.cri.containerd.runtimes.kata-qemu-virtiofs.options ConfigPath \"/opt/kata/share/defaults/kata-containers/configuration-qemu-virtiofs.toml\"
 	crudini --set "$containerd_conf_file" plugins.cri.containerd.runtimes.kata-nemu runtime_type \"io.containerd.kata-nemu.v2\"
 	crudini --set "$containerd_conf_file" plugins.cri.containerd.runtimes.kata-nemu.options ConfigPath \"/opt/kata/share/defaults/kata-containers/configuration-nemu.toml\"
+	crudini --set "$containerd_conf_file" plugins.cri.containerd.runtimes.untrusted runtime_type \"io.containerd.kata-qemu.v2\"
+	crudini --set "$containerd_conf_file" plugins.cri.containerd.runtimes.untrusted.options ConfigPath \"/opt/kata/share/defaults/kata-containers/configuration-qemu.toml\"
 
 	#Currently containerd has an assumption on the location of the shimv2 implementation
 	#Until support is added (see https://github.com/containerd/containerd/issues/3073),
