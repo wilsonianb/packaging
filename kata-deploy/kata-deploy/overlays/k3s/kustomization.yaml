@@ -3,3 +3,4 @@ bases:
 
 patchesStrategicMerge:
 - mount_k3s_conf.yaml
+- use_custom_image.yaml
